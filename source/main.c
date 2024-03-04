@@ -18,7 +18,9 @@
 
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "3rd_party/stb_truetype.h"
-#include "3rd_party/json.h"
+//#include "3rd_party/json.h"
+#include "3rd_party/cJSON.h"
+#include "3rd_party/cJSON.c"
 
 #include "prodefs.h"  //imports the type names i like to use
 #include "util.h"  //simple utility functions
@@ -41,17 +43,21 @@ u32 loop_time = 0;
 #define SCREEN_HEIGHT 600
 
 
-
+#include "sort_pair.h"
 #include "assets.h"
 #include "sprites.h"
+#include "collision.h"
 #include "entity.h"
 #include "render.h"
+#include "level.h"
 #include "game.h"
 
 #include "render.c"
 #include "sprites.c"
+#include "collision.c"
 #include "entity.c"
 #include "entity_sim.c"
+#include "level.c"
 #include "game.c"
 
 void
@@ -82,7 +88,7 @@ desktop_loop()
         process_key_press(&new_controller->move_up, &old_controller->move_up, currentKeyStates[SDL_SCANCODE_UP]);
         process_key_press(&new_controller->move_down, &old_controller->move_down, currentKeyStates[SDL_SCANCODE_DOWN]);
         process_key_press(&new_controller->action_right, &old_controller->action_right, currentKeyStates[SDL_SCANCODE_C]);
-        process_key_press(&new_controller->start, &old_controller->start, currentKeyStates[SDL_SCANCODE_Z]);
+        process_key_press(&new_controller->action_left, &old_controller->action_left, currentKeyStates[SDL_SCANCODE_Z]);
         
         
         current_time = SDL_GetTicks();

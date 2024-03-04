@@ -54,6 +54,7 @@ typedef enum
     IMG_ASSET,
     FONT_ASSET,
     SND_ASSET,
+    LEVEL_ASSET,
     TOTAL_ASSETS
 }AssetType;
 
@@ -62,6 +63,7 @@ typedef enum
 {
     SPRITE_IMAGE,
     FONT_IMAGE,
+    TILE_IMAGE,
     TOTAL_IMAGE_TYPES
 }ImageType;
 
@@ -72,7 +74,7 @@ X(TEST_FNT, "assets/AppleGaramond.ttf") \
 
 
 #define IMAGE_ASSETS \
-X(TEST_IMG, "assets/low_quailty_wiwaxia.png") \
+X(TEST_IMG, "assets/sprite_sheet.png") \
 
 
 
@@ -90,6 +92,7 @@ typedef enum
         TOTAL_FONT_ASSETS,
 }FontId;
 
+
 #undef X
 
 
@@ -103,6 +106,7 @@ FontAsset font_assets [TOTAL_FONT_ASSETS] =
 {
     FONT_ASSETS
 };
+
 #undef X
 
 ImageAsset* get_image_asset(ImageId id)

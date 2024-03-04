@@ -68,8 +68,12 @@ typedef unsigned char u8;
 #define MIN_I16 INT16_MIN
 #define MAX_I16 INT16_MAX
 
+#ifndef true
 #define true 1
+#endif
+#ifndef false
 #define false 0
+#endif
 
 //#define M_PI 3.14159265358979323846264338327950288
 #define M_2PI 2*M_PI

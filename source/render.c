@@ -88,6 +88,7 @@ void init_gl()
     glDepthFunc(GL_LEQUAL);
     // Compile shaders
     rd.shaders[STANDARD_SHADER] = create_shader_gl(vs_standard, fs_standard);
+    rd.shaders[LINE_SHADER] = create_shader_gl(vs_line, fs_line);
     
     unsigned int indices[ NUM_INDICES * MAX_RENDER_COMMANDS] = {  
         0, 1, 3, // first triangle
@@ -124,6 +125,9 @@ void init_gl()
     
     rd.shader_uniforms.standard_model = glGetUniformLocation( rd.shaders[STANDARD_SHADER], "model" );
     rd.shader_uniforms.standard_proj = glGetUniformLocation( rd.shaders[STANDARD_SHADER], "proj" );
+    
+    rd.shader_uniforms.line_model = glGetUniformLocation( rd.shaders[LINE_SHADER], "model" );
+    rd.shader_uniforms.line_proj = glGetUniformLocation( rd.shaders[LINE_SHADER], "proj" );
     
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, NUM_DRAW_FLOATS * sizeof(f32),
@@ -339,13 +343,18 @@ set_shader_uniforms(u32 id, Mat4* model, Mat4* proj)
             glUniformMatrix4fv(rd.shader_uniforms.standard_model, 1, GL_FALSE, model->elements);
             glUniformMatrix4fv(rd.shader_uniforms.standard_proj, 1, GL_FALSE, proj->elements);
         }break;
+        case LINE_SHADER:
+        {
+            glUniformMatrix4fv(rd.shader_uniforms.line_model, 1, GL_FALSE, model->elements);
+            glUniformMatrix4fv(rd.shader_uniforms.line_proj, 1, GL_FALSE, proj->elements);
+        }break;
     }
 }
 
 #define GL_TEXTURE_PERVERSION 0.0
 
 void
-batch_render(u32 count)
+batch_render(u32 count, u32 shader_id)
 {
     
     
@@ -354,7 +363,10 @@ batch_render(u32 count)
                     rd.gpu_buffer);
     
     glBindVertexArray(rd.VAO);
-    glDrawElements(GL_TRIANGLES, 6 * count, GL_UNSIGNED_INT, 0);
+    if(shader_id == LINE_SHADER)
+        glDrawElements(GL_LINES, 6 * count, GL_UNSIGNED_INT, 0);
+    else
+        glDrawElements(GL_TRIANGLES, 6 * count, GL_UNSIGNED_INT, 0);
     
 }
 
@@ -373,8 +385,11 @@ void render()
 {
     
     Mat4 model = mat4_identity;
-    Mat4 proj = mat4_ortho(0.0f, SCREEN_WIDTH, 0.0f, SCREEN_HEIGHT, -1.0f, 1.0f);;
     
+    model = mat4_translate(&model, &(V3){-rd.cam.x + (rd.cam.width)/2., -rd.cam.y  + (rd.cam.height)/2.0});
+    
+    
+    Mat4 proj = mat4_ortho(0.0f, SCREEN_WIDTH, 0.0f , SCREEN_HEIGHT, -1.0f, 1.0f);
     
     
     i32 tex_width = 0;
@@ -404,7 +419,7 @@ void render()
         
         if(rc->tex_sheet != curr_tex || rc->shader_id != curr_shader )
         {
-            batch_render(batch_count);
+            batch_render(batch_count, curr_shader);
             
             curr_tex = rc->tex_sheet;
             curr_shader = rc->shader_id;
@@ -433,31 +448,39 @@ void render()
                     
                 };
                 
-                /*
+                
+                memcpy(vertices_offset,vertice_temp, SINGLE_DRAW_SIZE);
+            }break;
+            case LINE_SHADER:
+            {
+                
+                V3 color = colors[rc->color];
+                //kinda wasting space for lines...
                 f32 vertice_temp [] = 
                 {
                     // pos                // tex
-                    rc->x_max, rc->y_max, 1.0, rc->t_y1/ tex_height, rc->alpha ,
-                    rc->x_max, rc->y_min, 1.0f,0, 0, rc->alpha,
-                    rc->x_min, rc->y_min, 0, 0, rc->alpha,
-                    rc->x_min, rc->y_max, 0, rc->t_y1/ tex_height , rc->alpha,
+                    rc->x_min, rc->y_min, color.x, color.y, color.z ,
+                    rc->x_max, rc->y_max, color.x, color.y, color.z,
+                    rc->x_max, rc->y_max, color.x, color.y, color.z,
+                    rc->x_max, rc->y_max, color.x, color.y, color.z,
                     
                 };
-                */
+                
                 memcpy(vertices_offset,vertice_temp, SINGLE_DRAW_SIZE);
             }break;
+            
         }
         ++batch_count;
     }
     
-    batch_render(batch_count);
+    batch_render(batch_count, curr_shader);
     
     
     rd.render_count = 0;
 }
 
 
-void draw_quad(f32 x_min, f32 y_min, f32 x_max, f32 y_max, f32 alpha, ImageType img_type, u32 asset_id, u32 shader_id, SpecialRenderInfo render_info)
+void draw_quad(f32 x_min, f32 y_min, f32 x_max, f32 y_max, f32 alpha, ImageType img_type, u32 asset_id, u32 shader_id,  SpecialRenderInfo render_info)
 {
     
     if(rd.render_count >= MAX_RENDER_COMMANDS)
@@ -478,6 +501,22 @@ void draw_quad(f32 x_min, f32 y_min, f32 x_max, f32 y_max, f32 alpha, ImageType 
     
     switch(img_type)
     {
+        case TILE_IMAGE:
+        {
+            
+            
+            ImageAsset* img = &image_assets[asset_id];
+            i32 id = render_info.spr_info.id;
+            
+            rc->t_x0 = (id % gs.level_dim_y) * TILE_SIZE;
+            rc->t_x1 = rc->t_x0 + TILE_SIZE;
+            rc->t_y0 = ((id / gs.level_dim_x)) * TILE_SIZE;
+            rc->t_y1 = rc->t_y0 +  TILE_SIZE;
+            //rc->t_y0 = (gs.level_dim_y -  (id / gs.level_dim_x) - 1) * TILE_SIZE;
+            //rc->t_y1 = rc->t_y0 + TILE_SIZE;
+            rc->tex_sheet = img->gpu_info;
+            
+        }break;
         case SPRITE_IMAGE:
         {
             const Sprite* spr = &sprites[render_info.spr_info.id];
@@ -498,9 +537,9 @@ void draw_quad(f32 x_min, f32 y_min, f32 x_max, f32 y_max, f32 alpha, ImageType 
                 
             }
             
-            rc->t_x0 = x_frame * spr->width;
+            rc->t_x0 = spr->offset_x + x_frame * spr->width;
             
-            rc->t_x1 = rc->t_x0 + spr->width;
+            rc->t_x1 = rc->t_x0 + spr->width ;
             rc->t_y0 = row * spr->height + spr->offset_y;
             rc->t_y1 = rc->t_y0 + spr->height;
             rc->tex_sheet = img->gpu_info;
@@ -603,10 +642,36 @@ draw_text(r32 x, r32 y, r32 scale, FontId id, char* text)
 }
 
 void
-draw_sprite(f32 x, f32 y, SpriteId id, u32 frame)
+draw_sprite(f32 x, f32 y, ZoomEffect z_effect, SpriteId id, u32 frame)
 {
-    const Sprite* spr = &sprites[id];
-    draw_quad(x - ((f32)spr->width/2), y, x + ((f32)spr->width/2), y + spr->height, 0, SPRITE_IMAGE, spr->image_id, STANDARD_SHADER, (SpecialRenderInfo){.spr_info = {id, frame}});
+    
+    
+    f32 scale = 0;
+    f32 hscale = 0;
+    if(z_effect == DOWN_ZOOM)
+    {
+        scale = gs.scale;
+        hscale = gs.hscale;
+        
+        
+        const Sprite* spr = &sprites[id];
+        draw_quad(x - ((f32)spr->width/2) - hscale, y - hscale - scale, x + ((f32)spr->width/2) +hscale, y + spr->height  - scale, 0, SPRITE_IMAGE, spr->image_id, STANDARD_SHADER, (SpecialRenderInfo){.spr_info = {id, frame}});
+    }
+    else if(z_effect == NORMAL_ZOOM)
+    {
+        scale = gs.scale;
+        hscale = gs.hscale;
+        
+        
+        const Sprite* spr = &sprites[id];
+        draw_quad(x - ((f32)spr->width/2) - hscale, y -hscale, x + ((f32)spr->width/2) +hscale, y + spr->height + hscale, 0, SPRITE_IMAGE, spr->image_id, STANDARD_SHADER, (SpecialRenderInfo){.spr_info = {id, frame}});
+    }
+    else
+    {
+        
+        const Sprite* spr = &sprites[id];
+        draw_quad(x - ((f32)spr->width/2) - hscale, y - hscale - scale, x + ((f32)spr->width/2) +hscale, y + spr->height  - scale, 0, SPRITE_IMAGE, spr->image_id, STANDARD_SHADER, (SpecialRenderInfo){.spr_info = {id, frame}});
+    }
 }
 
 void
@@ -614,11 +679,117 @@ draw_entity(Entity *e)
 {
     if(e->invisible)
         return;
-    draw_sprite(e->pos.x, e->pos.y, e->sprite_id, e->frame);
+    //draw_sprite(e->pos.x, e->pos.y, e->sprite_id, e->frame);
+    ZoomEffect z_effect = DOWN_ZOOM;
+    if(e->type == PLAYER_ENT)
+        z_effect= NO_ZOOM;
+    if(e->type == PARALAX_ENT && e->z_location > gs.z_location)
+        z_effect= NORMAL_ZOOM;
+    draw_sprite(e->aabb.pos.x, e->aabb.pos.y - e->aabb.half_size.y, z_effect,  e->sprite_id, e->frame);
 }
 
 void draw_entities()
 {
     entities_apply(&draw_entity);
 }
+
+
+void draw_line(V2 p0, V2 p1, u32 color)
+{
+    
+    if(rd.render_count >= MAX_RENDER_COMMANDS)
+        return;
+    
+    
+    RenderCommand* rc = &rd.draws[rd.render_count];
+    
+    rc->x_min = p0.x;
+    rc->x_max = p1.x;
+    rc->y_min = p0.y;
+    rc->y_max = p1.y;
+    //rc->alpha = alpha;
+    rc->shader_id = LINE_SHADER;
+    rc->color = color;
+    
+    //rc->depth = depth;
+    
+    ++rd.render_count;
+}
+
+/*
+void
+draw_polygon(Polygon* p)
+{
+    if(p->num_points < 2)
+        return;
+    for(i32 p0 = 0; p0 < p->num_points -1; p0++)
+    {
+        i32 p1 = p0+1;
+        draw_line(p->points[p0], p->points[p1],M_RED);
+    }
+    
+    draw_line(p->points[p->num_points -1], p->points[0], M_RED);
+}
+*/
+
+
+void
+draw_bounding_box(Entity *e)
+{
+    /*
+    V2 p0 = {e->pos.x - e->dim.x/2.0f,e->pos.y};
+    V2 p1 = {e->pos.x + e->dim.x/2.0f,e->pos.y};
+    V2 p2 = {e->pos.x + e->dim.x/2.0f,e->pos.y+e->dim.y};
+    V2 p3 = {e->pos.x - e->dim.x/2.0f,e->pos.y+e->dim.y};
+    */
+    
+    //V2 p0 = {e->aabb.pos.x - e->aabb.half_size.x,e->aabb.pos.y};
+    //V2 p1 = {e->aabb.pos.x + e->aabb.half_size.x,e->aabb.pos.y};
+    //V2 p2 = {e->aabb.pos.x + e->aabb.half_size.x,e->aabb.pos.y+e->aabb.half_size.y*2};
+    //V2 p3 = {e->aabb.pos.x - e->aabb.half_size.x,e->aabb.pos.y+e->aabb.half_size.y*2};
+    
+    V2 p0 = {e->aabb.pos.x - e->aabb.half_size.x,e->aabb.pos.y - e->aabb.half_size.y};
+    V2 p1 = {e->aabb.pos.x + e->aabb.half_size.x,e->aabb.pos.y - e->aabb.half_size.y};
+    V2 p2 = {e->aabb.pos.x + e->aabb.half_size.x,e->aabb.pos.y+e->aabb.half_size.y};
+    V2 p3 = {e->aabb.pos.x - e->aabb.half_size.x,e->aabb.pos.y+e->aabb.half_size.y};
+    
+    
+    draw_line(p0, p1,M_RED);
+    draw_line(p1, p2,M_RED);
+    draw_line(p2, p3,M_RED);
+    draw_line(p3, p0,M_RED);
+}
+
+void draw_bounding_boxs()
+{
+    for(i32 i = 0; i < gs.num_entities; i++)
+        draw_bounding_box(&gs.entities[i]);
+}
+
+
+
+
+void draw_tiles()
+{
+    f32 scale = gs.scale;
+    f32 hscale = gs.hscale;
+    
+    for(i32 y = 0; y < gs.level_dim_y; y++)
+    {
+        for(i32 x = 0; x < gs.level_dim_x; x++)
+        {
+            i32 id = gs.tiles[x + (y * gs.level_dim_x)];
+            if(id == 0)
+                continue;
+            else
+                id += -1;
+            
+            draw_quad(x *TILE_SIZE  - hscale, (gs.level_dim_y - y -1 ) * TILE_SIZE  -scale - hscale, x *TILE_SIZE + TILE_SIZE +hscale, (gs.level_dim_y - y) * TILE_SIZE - scale , 0, TILE_IMAGE, TEST_IMG, STANDARD_SHADER, (SpecialRenderInfo){.spr_info = {id, 0}});
+        }
+        
+    }
+    
+}
+
+
 

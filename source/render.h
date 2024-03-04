@@ -45,9 +45,35 @@ const char* fs_standard =
 
 
 
+const char* vs_line =
+"precision highp float;\n"
+"attribute vec2 vec_pos;\n"
+"attribute vec3 line_color;\n"
+"uniform mat4 view;\n"
+"uniform mat4 model;\n"
+"uniform mat4 proj;\n"
+"varying vec3 pass_color;\n"
+"void main()\n"
+"{\n"
+"pass_color = line_color;\n"
+"gl_Position = proj * model * vec4(vec_pos.xy, 0.0, 1.0);\n"
+"}";
+
+
+const char* fs_line =
+"precision mediump float;\n"
+"varying vec3 pass_color;\n"
+"void main()\n"
+"{\n"
+"    gl_FragColor = vec4(pass_color, 1.0);\n"
+"}";
+
+
+
 typedef enum
 {
     STANDARD_SHADER,
+    LINE_SHADER,
     
     TOTAL_SHADERS,
 }ShaderId;
@@ -80,11 +106,23 @@ typedef enum
     GUI_TOP,
 }DepthLayer;
 
+typedef enum
+{
+    M_RED,
+    TOTAL_COLORS
+}ColorId;
+
+V3 colors [TOTAL_COLORS] = 
+{
+    [M_RED] = {1.0,0,0},
+};
 
 typedef struct
 {
     u32 standard_model;
     u32 standard_proj;
+    u32 line_model;
+    u32 line_proj;
     
 }ShaderUniforms;
 
@@ -105,6 +143,27 @@ typedef struct
 }SpecialRenderInfo;
 
 
+
+typedef struct
+{
+    f32 x;
+    f32 y;
+    f32 width;
+    f32 height;
+    i32 viewport_height;
+    i32 viewport_width;
+    
+    //maybe zoom???
+}GameCam;
+
+
+typedef enum 
+{
+    NO_ZOOM,
+    DOWN_ZOOM,
+    NORMAL_ZOOM,
+}ZoomEffect;
+
 typedef struct
 {
     
@@ -114,9 +173,12 @@ typedef struct
     u32 render_count;
     ShaderUniforms shader_uniforms;
     u32 VAO, VBO, EBO;
+    GameCam cam;
     
 }RenderData;
 global_variable RenderData rd;
+
+
 
 
 
