@@ -25,4 +25,7 @@ typedef struct
     f32 hit_time;
 }CollisionInfo;
 
+
+void kill_bink();
+
 #endif //COLLISION_H

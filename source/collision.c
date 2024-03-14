@@ -1,36 +1,141 @@
 
+void
+kill_bink()
+{
+    
+    gs.player->death_marked = true;
+    
+    gs.bink_dead = true;
+    for(i32 i = 0; i < 3; i++)
+    {
+        add_particle_entity(gs.player->aabb.pos.x,gs.player->aabb.pos.y, M_PINK, 600, 0.8f);
+        add_particle_entity(gs.player->aabb.pos.x,gs.player->aabb.pos.y, M_LIGHT_YELLOW, 600, 0.8f);
+        add_particle_entity(gs.player->aabb.pos.x,gs.player->aabb.pos.y, M_LIGHT_BLUE, 600, 0.8f);
+        
+    }
+    play_sfx(BINK_DEATH_SFX);
+    
+    add_misc_entity(DEATH_RESPAWNER);
+}
+
 
 void process_halt_collide(Entity *e0, Entity *e1, CollisionInfo* col_info)
 {
-    
-    
-    e0->velocity.x += col_info->contact_normal.x * abs_r32(e0->velocity.x) * (1.0f - col_info->hit_time);
-    e0->velocity.y += col_info->contact_normal.y * abs_r32(e0->velocity.y) * (1.0f - col_info->hit_time);
-    e0->collide_check = true;
-    
-    if(e0->type== PLAYER_ENT && e1->type==S_COLLISION_ENT)
+    if(e0->type == BAD_BULLET_ENT)
     {
-        if(col_info->contact_normal.y == 1.0f)
+        if(!(e0->subtype == EVIL_WITCH))
         {
-            e0->grounded = true;
-            if(!gi->controller.action_right.ended_down)
-                e0->jump_buffer = 0.0f;
+            e0->death_marked = true;
+            for(i32 i = 0; i < 5; i++)
+            {
+                add_particle_entity(e0->aabb.pos.x,e0->aabb.pos.y, M_WHITE, 600, 0.4f);
+                
+            }
+            
+        }
+        if(e1->type == PLAYER_ENT)
+        {
+            kill_bink();
+        }
+    }
+    if(e1->type == BAD_BULLET_ENT)
+    {
+        if(!(e1->subtype == EVIL_WITCH))
+        {
+            e1->death_marked = true;
+            for(i32 i = 0; i < 5; i++)
+            {
+                add_particle_entity(e0->aabb.pos.x,e0->aabb.pos.y, M_WHITE, 600, 0.4f);
+                
+            }
+            
+        }
+        if(e0->type == PLAYER_ENT)
+        {
+            kill_bink();
         }
     }
     
-    
+    if(e0->type == BINK_BLAST_ENT)
+    {
+        e0->death_marked = true;
+        add_temp_entity(e0->aabb.pos.x, e0->aabb.pos.y- 15.0f, BINK_BLAST_FINISH_SPR);
+        play_sfx(BBF_SFX);
+        for(i32 i = 0; i < 2; i++)
+        {
+            add_particle_entity(e0->aabb.pos.x,e0->aabb.pos.y, M_HOT_PINK, 1000, 0.4f);
+            add_particle_entity(e0->aabb.pos.x,e0->aabb.pos.y, M_ORANGE, 1000, 0.4f);
+            
+        }
+        if(e1->type == DESTRUCTIBLE_ENT)
+        {
+            if(e1->sprite_id == DEVIL_TREE_SPR )
+            {
+                
+                e1->death_marked = true;
+                Entity *t_temp = add_temp_entity(e1->aabb.pos.x, e1->aabb.pos.y, DEVIL_DIES_SPR);
+                t_temp->scale = 1.75;
+                gs.devil_dead = true;
+                set_entity_sprite(gs.witch, WITCH_P_SPR);
+                gs.witch->shader_id= STANDARD_SHADER;
+                start_dialouge(WITCH_1_D, WITCH_4_D);
+                gs.platform_mode = true;
+                stop_music();
+                entities_apply(&death_mark_witch_blocks);
+                gs.witch_active = false;
+                play_sfx(TREE_DEATH_SFX);
+            }
+            else
+            {
+                e1->death_marked = true;
+                play_sfx(CRUMBLE_SFX);
+                for(i32 i = 0; i < 10; i++)
+                {
+                    
+                    add_particle_entity(e1->aabb.pos.x,e1->aabb.pos.y, M_GRAY, 300, 0.7f);
+                    
+                }
+            }
+        }
+    }
+    if(e0->type== PLAYER_ENT && (e1->type==S_COLLISION_ENT || e1->type==DESTRUCTIBLE_ENT ))
+    {
+        if(e1->subtype == TELE_BOX)
+        {
+            
+            prepare_warp(e1->c.room_id, e1->c.tele_x, e1->c.tele_y);
+            return;
+        }
+        
+        
+        if(gs.platform_mode)
+        {
+            
+            if(col_info->contact_normal.y == 1.0f)
+            {
+                e0->p.grounded = true;
+                {
+                    if(e0->sprite_id == PLAYER_PRJ_SPR)
+                        set_entity_sprite(e0, PLAYER_PRI_SPR);
+                    else if(e0->sprite_id == PLAYER_PLJ_SPR)
+                        set_entity_sprite(e0, PLAYER_PLI_SPR);
+                    
+                    if(!gi->controller.action_right.ended_down)
+                        e0->p.jump_buffer = 0.0f;
+                }
+            }
+            
+        }
+    }
+    if(!e0->intangible)
+    {
+        e0->velocity.x += col_info->contact_normal.x * abs_r32(e0->velocity.x) * (1.0f - col_info->hit_time);
+        e0->velocity.y += col_info->contact_normal.y * abs_r32(e0->velocity.y) * (1.0f - col_info->hit_time);
+        e0->p.collide_check = true;
+    }
 }
 
 
-
-
-inline
-void f32_swap(f32* a, f32 *b)
-{
-    f32 c = *b;
-    *b = *a;
-    *a = c;
-}
 
 
 b32 
@@ -106,11 +211,10 @@ b32 dynamic_rect_vs_rect(AABB *src_aabb, V2 src_velocity,  AABB *target_aabb, f3
     return false;
 }
 
-#define PHYSICS_ITERATIONS 2
-
 void static_collisions()
 {
-    
+    if(gs.pause_collision)
+        return;
     V2 contact_pos;
     V2 contact_normal;
     f32 hit_time = 0.0f;
@@ -118,12 +222,14 @@ void static_collisions()
     for(i32 i = 0; i < gs.num_entities; i++)
     {
         Entity* e0 = &gs.entities[i];
-        if(e0->type != PLAYER_ENT)
+        if(e0->type != PLAYER_ENT && e0->type != BINK_BLAST_ENT && e0->type != BAD_BULLET_ENT)
+            continue;
+        if(e0->velocity.x == 0 && e0->velocity.y == 0)
             continue;
         for(i32 j = 0; j < gs.num_entities; j++)
         {
             Entity* e1 = &gs.entities[j];
-            if(e1->type != S_COLLISION_ENT || e0 == e1)
+            if((e1->type != S_COLLISION_ENT && e1->type != DESTRUCTIBLE_ENT && e1->type != PLAYER_ENT &&  e1->type != BAD_BULLET_ENT)|| e0 == e1)
                 continue;
             AABB aabb0 = e0->aabb;
             AABB aabb1 = e1->aabb;
@@ -152,10 +258,22 @@ void static_collisions()
                 };
                 
                 process_halt_collide(e0,e1, &col_info);
+                process_halt_collide(e0,e1, &col_info);
             }
         }
-        e0->aabb.pos = v2_add(e0->aabb.pos, v2_mul(gi->elapsed_seconds, e0->velocity)); 
+        //e0->aabb.pos = v2_add(e0->aabb.pos, v2_mul(gi->elapsed_seconds, e0->velocity)); 
+        
+    }
+    
+    for(i32 i = 0; i < gs.num_entities; i++)
+    {
+        Entity* e = &gs.entities[i];
+        e->aabb.pos = v2_add(e->aabb.pos, v2_mul(gi->elapsed_seconds, e->velocity)); 
         
     }
     
 }
+
+
+
+

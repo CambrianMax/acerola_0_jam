@@ -4,6 +4,16 @@
 #define UTIL_H
 
 
+#define STRINGIFY(x) #x
+
+
+extern inline
+void f32_swap(f32* a, f32 *b)
+{
+    f32 c = *b;
+    *b = *a;
+    *a = c;
+}
 
 
 u32 get_file_size(char* filename);

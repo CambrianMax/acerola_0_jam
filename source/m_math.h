@@ -31,7 +31,7 @@ typedef union V3
     real32 e[3];
 }V3;
 
-inline V2
+inline extern V2
 v2_add (V2 a, V2 b)
 {
     V2 result;
@@ -42,7 +42,7 @@ v2_add (V2 a, V2 b)
 }
 
 
-inline V2
+inline extern V2
 v2_sub (V2 a, V2 b)
 {
     V2 result;
@@ -53,7 +53,7 @@ v2_sub (V2 a, V2 b)
 }
 
 
-inline V2
+inline extern V2
 v2_mul (real32 a, V2 b)
 {
     V2 result;
@@ -63,13 +63,13 @@ v2_mul (real32 a, V2 b)
     return result;
 }
 
-inline f32
+inline extern f32
 v2_mag(V2 a)
 {
     return sqrt((a.x * a.x) + (a.y * a.y));
 }
 
-inline V2
+inline extern V2
 v2_normalize(V2 a)
 {
     f32 mag = v2_mag(a);
@@ -79,14 +79,14 @@ v2_normalize(V2 a)
 }
 
 
-inline V2
+inline extern V2
 v2_perp(V2 a)
 {
     V2 result = {a.y, -a.x};
     return result;
 }
 
-inline f32
+inline extern f32
 v2_dot(V2 a, V2 b)
 {
     return (a.x * b.x) + (a.y * b.y);
@@ -94,7 +94,7 @@ v2_dot(V2 a, V2 b)
 
 
 
-inline f32
+inline extern f32
 v2_theta(V2 a, V2 b)
 {
     f32 dot = v2_dot(a, b);
@@ -104,7 +104,7 @@ v2_theta(V2 a, V2 b)
 }
 
 
-inline f32
+inline extern f32
 v2_theta_cc(V2 a)
 {
     f32 result = 0.0f;
@@ -120,7 +120,7 @@ v2_theta_cc(V2 a)
     return result;
 }
 
-inline V2
+inline extern V2
 theta_to_vec(f32 theta)
 {
     V2 result = {cos(theta), sin(theta)};
@@ -128,7 +128,7 @@ theta_to_vec(f32 theta)
 }
 
 
-inline int32
+inline extern int32
 abs_i32(int32 a) 
 {
     if( a < 0)
@@ -142,7 +142,7 @@ abs_i32(int32 a)
 }
 
 
-inline real32
+inline extern real32
 abs_r32(real32 a) 
 {
     
@@ -158,7 +158,7 @@ abs_r32(real32 a)
 
 
 
-inline bool32
+inline extern bool32
 opposite_signs_r32(real32 a, real32 b)
 {
     return (a < 0)? (b >= 0): (b < 0);
@@ -195,28 +195,28 @@ f32 cap_f32(f32 val, f32 max)
 
 
 
-inline int32 min_i32(int32 a, int32 b) {return a < b ? a : b;}
-inline int32 min_u32(uint32 a, uint32 b) {return a < b ? a : b;}
-inline real32 min_r32(real32 a, real32 b) {return a < b ? a : b;}
+inline extern int32 min_i32(int32 a, int32 b) {return a < b ? a : b;}
+inline extern int32 min_u32(uint32 a, uint32 b) {return a < b ? a : b;}
+inline extern real32 min_r32(real32 a, real32 b) {return a < b ? a : b;}
 
-inline int32 max_i32(int32 a, int32 b) {return a > b ? a : b;}
-inline int32 max_u32(uint32 a, uint32 b) {return a > b ? a : b;}
-inline real32 max_r32(real32 a, real32 b) {return a > b ? a : b;}
+inline extern int32 max_i32(int32 a, int32 b) {return a > b ? a : b;}
+inline extern int32 max_u32(uint32 a, uint32 b) {return a > b ? a : b;}
+inline extern real32 max_r32(real32 a, real32 b) {return a > b ? a : b;}
 
-inline f32 square_f32(f32 num){return num * num;};
+inline extern f32 square_f32(f32 num){return num * num;};
 
-inline r32 squared_dist(V2 pos1, V2 pos2){return (square_f32(pos2.x - pos1.x) + square_f32(pos2.y - pos1.y)) ;};
-inline r32 dist(V2 pos1, V2 pos2){return sqrt(squared_dist(pos1, pos2));};
+inline extern r32 squared_dist(V2 pos1, V2 pos2){return (square_f32(pos2.x - pos1.x) + square_f32(pos2.y - pos1.y)) ;};
+inline extern r32 dist(V2 pos1, V2 pos2){return sqrt(squared_dist(pos1, pos2));};
 
-inline f32 lerp(f32 a, f32 b, f32 f){return (a * (1.0f - f)) + (b*f);};
-inline f32 capped_lerp(f32 a, f32 b, f32 f)
+inline extern f32 lerp(f32 a, f32 b, f32 f){return (a * (1.0f - f)) + (b*f);};
+inline extern f32 capped_lerp(f32 a, f32 b, f32 f)
 {
     if(f >= 1.0)
         return b;
     return (a * (1.0f - f)) + (b*f);
 };
 
-inline f32 constant_change(f32 a, f32 b, f32 time, f32 time_for_change)
+inline extern f32 constant_change(f32 a, f32 b, f32 time, f32 time_for_change)
 {
     if(time > time_for_change)
         return b;
@@ -225,7 +225,7 @@ inline f32 constant_change(f32 a, f32 b, f32 time, f32 time_for_change)
 }
 
 
-inline f32 constant_change_measured(f32 *val, f32 a, f32 b, f32 time, f32 time_for_change)
+inline extern f32 constant_change_measured(f32 *val, f32 a, f32 b, f32 time, f32 time_for_change)
 {
     if(time > time_for_change)
     {
@@ -241,8 +241,8 @@ inline f32 constant_change_measured(f32 *val, f32 a, f32 b, f32 time, f32 time_f
 
 
 
-inline V2 v2_between_2_pts(V2 pt1, V2 pt2){return (V2){pt2.x - pt1.x, pt2.y - pt2.y};};
-inline V2 unit_v2_between_2_pts(V2 pt1, V2 pt2)
+inline extern V2 v2_between_2_pts(V2 pt1, V2 pt2){return (V2){pt2.x - pt1.x, pt2.y - pt2.y};};
+inline extern V2 unit_v2_between_2_pts(V2 pt1, V2 pt2)
 {
     V2 vec = v2_between_2_pts(pt1, pt2);
     f32 mag = v2_mag(vec);

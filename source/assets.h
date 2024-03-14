@@ -13,7 +13,8 @@
 
 #define FONT_ATLAS_WIDTH 1024
 #define FONT_ATLAS_HIEGHT 1024
-#define FONT_SIZE 100
+//#define FONT_SIZE 100
+#define FONT_SIZE 25
 
 #define BITMAP_BYTES_PER_PIXEL 4
 
@@ -68,13 +69,55 @@ typedef enum
 }ImageType;
 
 
+typedef struct
+{
+    char* filename;
+    b32 loaded;
+    Mix_Music* mus;
+    
+}MusicAsset;
+
+
+typedef struct
+{
+    char* filename;
+    b32 loaded;
+    Mix_Chunk* sfx;
+    
+}SfxAsset;
 
 #define FONT_ASSETS \
-X(TEST_FNT, "assets/AppleGaramond.ttf") \
+X(TEST_FNT, "assets/VT323-Regular.ttf") \
 
 
 #define IMAGE_ASSETS \
 X(TEST_IMG, "assets/sprite_sheet.png") \
+X(TITLE_IMG, "assets/title.png") \
+X(FNASTY_IMG, "assets/fnasty.png") \
+
+
+#define MUSIC_ASSETS \
+X(INVALID_MUS, "assets/bink_home.ogg") \
+X(INTRO_MUS, "assets/intro.ogg") \
+X(BINKS_HOUSE_MUS, "assets/bink_home.ogg") \
+X(QUEST_MUS, "assets/quest.ogg") \
+X(CAVE_MUS, "assets/cave_sounds.ogg") \
+X(WITCH_MUS, "assets/witches_rage.ogg") \
+
+
+#define SFX_ASSETS \
+X(BB_SFX, "assets/bblast.ogg") \
+X(BBF_SFX, "assets/bbfinish.ogg") \
+X(BINK_JUMP_SFX, "assets/jmp.ogg") \
+X(DIA_SFX, "assets/dia_start.ogg") \
+X(CRUMBLE_SFX, "assets/rock.ogg") \
+X(TELE_SFX, "assets/tel.ogg") \
+X(TREE_DEATH_SFX, "assets/tree_death.ogg") \
+X(BINK_DEATH_SFX, "assets/p_death.ogg") \
+X(WITCH_LAUGH_SFX, "assets/w_laugh.ogg") \
+
+
+
 
 
 
@@ -93,6 +136,19 @@ typedef enum
 }FontId;
 
 
+typedef enum
+{
+    MUSIC_ASSETS
+        TOTAL_MUSIC_ASSETS,
+}MusicId;
+
+
+typedef enum
+{
+    SFX_ASSETS
+        TOTAL_SFX_ASSETS,
+}SfxId;
+
 #undef X
 
 
@@ -105,6 +161,18 @@ ImageAsset image_assets [TOTAL_IMAGE_ASSETS] =
 FontAsset font_assets [TOTAL_FONT_ASSETS] = 
 {
     FONT_ASSETS
+};
+
+
+MusicAsset music_assets [TOTAL_MUSIC_ASSETS] = 
+{
+    MUSIC_ASSETS
+};
+
+
+SfxAsset sfx_assets [TOTAL_SFX_ASSETS] = 
+{
+    SFX_ASSETS
 };
 
 #undef X
@@ -125,20 +193,25 @@ set_image_dim(ImageType type, u32 asset_id, i32* width, i32* height)
 {
     switch(type)
     {
-        case SPRITE_IMAGE:
-        {
-            *width = image_assets[asset_id].width;
-            *height = image_assets[asset_id].height;
-        }break;
         case FONT_IMAGE:
         {
             *width = font_assets[asset_id].width;
             *height = font_assets[asset_id].height;
         }break;
+        
+        case SPRITE_IMAGE:
+        case TILE_IMAGE:
+        default:
+        {
+            *width = image_assets[asset_id].width;
+            *height = image_assets[asset_id].height;
+        }break;
     }
 }
 
 
+void play_music(i32 id);
+void free_music(i32 id);
 
 
 

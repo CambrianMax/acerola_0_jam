@@ -32,10 +32,15 @@ update_sprite(Entity* e)
         if(e->frame_time >= max_frame_time)
             e->frame_time = 0;
         if(e->frame >= spr->frame_count)
-            e->frame = 0;
+        {
+            if(e->type == TEMP_ENT)
+            {
+                e->death_marked = true;
+            }else
+                e->frame = 0;
+        }
     }
 }
-
 
 
 void

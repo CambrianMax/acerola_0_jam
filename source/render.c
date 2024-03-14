@@ -7,15 +7,15 @@ GLuint create_shader_gl(const char* vertex_shader, const char* fragment_shader)
     //for debuging
     //GLchar log_test [50000];
     //GLsizei size;
-    GLenum err = GL_NO_ERROR;
-    err =  glGetError();
+    //GLenum err = GL_NO_ERROR;
+    //err =  glGetError();
     GLuint vert_shader, frag_shader, shader_id;
     
     
     vert_shader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource( vert_shader, 1, &vertex_shader, NULL);
     glCompileShader(vert_shader);
-    err =  glGetError();
+    //err =  glGetError();
     
     
     
@@ -24,7 +24,7 @@ GLuint create_shader_gl(const char* vertex_shader, const char* fragment_shader)
     
     GLint success = 0;
     glGetShaderiv(vert_shader, GL_COMPILE_STATUS, &success);
-    err =  glGetError();
+    //err =  glGetError();
     
     Assert(success != GL_FALSE);
     
@@ -33,12 +33,12 @@ GLuint create_shader_gl(const char* vertex_shader, const char* fragment_shader)
     glShaderSource( frag_shader, 1, &fragment_shader, NULL);
     glCompileShader(frag_shader);
     //glGetShaderInfoLog(frag_shader, 50000, &size, log_test);
-    err =  glGetError();
+    //err =  glGetError();
     
     
     glGetShaderiv(frag_shader, GL_COMPILE_STATUS, &success);
     
-    err =  glGetError();
+    //err =  glGetError();
     
     Assert(success != GL_FALSE);
     
@@ -65,7 +65,7 @@ GLuint create_shader_gl(const char* vertex_shader, const char* fragment_shader)
     //err =  glGetError();
     
     glGetProgramiv(shader_id, GL_LINK_STATUS, &success);
-    err =  glGetError();
+    //err =  glGetError();
     
     
     Assert(success != GL_FALSE);
@@ -80,7 +80,7 @@ void init_gl()
     
     
     // Set clear color
-    glClearColor(0.0f, 0.4f, 0.4f, 1.0f);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -88,7 +88,9 @@ void init_gl()
     glDepthFunc(GL_LEQUAL);
     // Compile shaders
     rd.shaders[STANDARD_SHADER] = create_shader_gl(vs_standard, fs_standard);
+    rd.shaders[COLOR_SHADER] = create_shader_gl(vs_color, fs_color);
     rd.shaders[LINE_SHADER] = create_shader_gl(vs_line, fs_line);
+    rd.shaders[GLOW_SHADER] = create_shader_gl(vs_glow, fs_glow);
     
     unsigned int indices[ NUM_INDICES * MAX_RENDER_COMMANDS] = {  
         0, 1, 3, // first triangle
@@ -126,8 +128,19 @@ void init_gl()
     rd.shader_uniforms.standard_model = glGetUniformLocation( rd.shaders[STANDARD_SHADER], "model" );
     rd.shader_uniforms.standard_proj = glGetUniformLocation( rd.shaders[STANDARD_SHADER], "proj" );
     
+    
+    rd.shader_uniforms.color_model = glGetUniformLocation( rd.shaders[COLOR_SHADER], "model" );
+    rd.shader_uniforms.color_proj = glGetUniformLocation( rd.shaders[COLOR_SHADER], "proj" );
+    rd.shader_uniforms.color_color = glGetUniformLocation( rd.shaders[COLOR_SHADER], "color" );
+    
+    
     rd.shader_uniforms.line_model = glGetUniformLocation( rd.shaders[LINE_SHADER], "model" );
     rd.shader_uniforms.line_proj = glGetUniformLocation( rd.shaders[LINE_SHADER], "proj" );
+    
+    
+    rd.shader_uniforms.glow_model = glGetUniformLocation( rd.shaders[GLOW_SHADER], "model" );
+    rd.shader_uniforms.glow_proj = glGetUniformLocation( rd.shaders[GLOW_SHADER], "proj" );
+    
     
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, NUM_DRAW_FLOATS * sizeof(f32),
@@ -334,14 +347,25 @@ void load_image(ImageId id)
 
 
 void
-set_shader_uniforms(u32 id, Mat4* model, Mat4* proj)
+set_shader_uniforms(u32 id, Mat4* model, Mat4* proj, V3* color)
 {
     switch(id)
     {
+        case COLOR_SHADER:
+        {
+            glUniformMatrix4fv(rd.shader_uniforms.color_model, 1, GL_FALSE, model->elements);
+            glUniformMatrix4fv(rd.shader_uniforms.color_proj, 1, GL_FALSE, proj->elements);
+            glUniform3fv(rd.shader_uniforms.color_color, 1, color->e);
+        }break;
         case STANDARD_SHADER:
         {
             glUniformMatrix4fv(rd.shader_uniforms.standard_model, 1, GL_FALSE, model->elements);
             glUniformMatrix4fv(rd.shader_uniforms.standard_proj, 1, GL_FALSE, proj->elements);
+        }break;
+        case GLOW_SHADER:
+        {
+            glUniformMatrix4fv(rd.shader_uniforms.glow_model, 1, GL_FALSE, model->elements);
+            glUniformMatrix4fv(rd.shader_uniforms.glow_proj, 1, GL_FALSE, proj->elements);
         }break;
         case LINE_SHADER:
         {
@@ -399,15 +423,17 @@ void render()
     u32 curr_shader = 0;
     u32 batch_count = 0;
     u32 last_color  = 0;
+    u32 curr_color  = 0;
     
     RenderCommand *rc = &rd.draws[0];
     if(rd.render_count > 0)
     {
         curr_tex = rc->tex_sheet;
         curr_shader = rc->shader_id;
+        last_color = rc->color;
         glUseProgram(rd.shaders[curr_shader]);
         glBindTexture(GL_TEXTURE_2D, rc->tex_sheet);
-        set_shader_uniforms(curr_shader, &model, &proj);
+        set_shader_uniforms(curr_shader, &model, &proj, &colors[rc->color]);
         set_image_dim(rc->img_type, rc->asset_id, &tex_width, &tex_height);
         
     }
@@ -417,15 +443,16 @@ void render()
         
         rc = &rd.draws[i];
         
-        if(rc->tex_sheet != curr_tex || rc->shader_id != curr_shader )
+        if(rc->tex_sheet != curr_tex || rc->shader_id != curr_shader || (rc->shader_id == COLOR_SHADER && rc->color != last_color))
         {
             batch_render(batch_count, curr_shader);
             
             curr_tex = rc->tex_sheet;
             curr_shader = rc->shader_id;
+            last_color = rc->color;
             glUseProgram(rd.shaders[curr_shader]);
             glBindTexture(GL_TEXTURE_2D, rc->tex_sheet);
-            set_shader_uniforms(curr_shader, &model, &proj);
+            set_shader_uniforms(curr_shader, &model, &proj, &colors[rc->color]);
             set_image_dim(rc->img_type, rc->asset_id, &tex_width, &tex_height);
             batch_count = 0;
             
@@ -436,6 +463,23 @@ void render()
         switch(curr_shader)
         {
             
+            case GLOW_SHADER: 
+            {
+                
+                f32 vertice_temp [] = 
+                {
+                    // pos                // tex
+                    rc->x_max, rc->y_max, (rc->t_x1) / tex_width, 1.0f-(rc->t_y0/ tex_height), gs.total_time ,
+                    rc->x_max, rc->y_min, (rc->t_x1) / tex_width, 1.0f-(rc->t_y1 / tex_height), gs.total_time,
+                    rc->x_min, rc->y_min, (rc->t_x0) / tex_width, 1.0f-(rc->t_y1 / tex_height), gs.total_time,
+                    rc->x_min, rc->y_max, (rc->t_x0) / tex_width, 1.0f-(rc->t_y0 / tex_height), gs.total_time,
+                    
+                };
+                
+                
+                memcpy(vertices_offset,vertice_temp, SINGLE_DRAW_SIZE);
+            }break;
+            case COLOR_SHADER: 
             case STANDARD_SHADER: {
                 
                 f32 vertice_temp [] = 
@@ -498,7 +542,6 @@ void draw_quad(f32 x_min, f32 y_min, f32 x_max, f32 y_max, f32 alpha, ImageType 
     rc->img_type = img_type;
     rc->asset_id = asset_id;
     
-    
     switch(img_type)
     {
         case TILE_IMAGE:
@@ -508,9 +551,12 @@ void draw_quad(f32 x_min, f32 y_min, f32 x_max, f32 y_max, f32 alpha, ImageType 
             ImageAsset* img = &image_assets[asset_id];
             i32 id = render_info.spr_info.id;
             
-            rc->t_x0 = (id % gs.level_dim_y) * TILE_SIZE;
+            //rc->t_x0 = (id % gs.level_dim_y) * TILE_SIZE;
+            rc->t_x0 = (id %  (img->width/TILE_SIZE)) * TILE_SIZE;
             rc->t_x1 = rc->t_x0 + TILE_SIZE;
-            rc->t_y0 = ((id / gs.level_dim_x)) * TILE_SIZE;
+            
+            rc->t_y0 = (id /  (img->width/TILE_SIZE)) *TILE_SIZE;
+            //rc->t_y0 = ((id / gs.level_dim_x)) * TILE_SIZE;
             rc->t_y1 = rc->t_y0 +  TILE_SIZE;
             //rc->t_y0 = (gs.level_dim_y -  (id / gs.level_dim_x) - 1) * TILE_SIZE;
             //rc->t_y1 = rc->t_y0 + TILE_SIZE;
@@ -543,17 +589,18 @@ void draw_quad(f32 x_min, f32 y_min, f32 x_max, f32 y_max, f32 alpha, ImageType 
             rc->t_y0 = row * spr->height + spr->offset_y;
             rc->t_y1 = rc->t_y0 + spr->height;
             rc->tex_sheet = img->gpu_info;
+            rc->color = render_info.spr_info.color;
         }break;
         case FONT_IMAGE:
         {
             FontAsset *fnt = &font_assets[asset_id];
-            stbtt_bakedchar* gly = &fnt->char_data[render_info.char_index];
+            stbtt_bakedchar* gly = &fnt->char_data[render_info.fnt_info.char_index];
             rc->t_x0 = gly->x0;
             rc->t_x1 = gly->x1;
             rc->t_y0 = gly->y0;
             rc->t_y1 = gly->y1;
             rc->tex_sheet = fnt->gpu_info;
-            
+            rc->color = render_info.fnt_info.color;
         }break;
         
     }
@@ -580,8 +627,22 @@ b32 is_descender_glyph(char c)
 }
 
 
+b32 is_acender_glyph(char c)
+{
+    switch(c)
+    {
+        case '\'': return true;
+        case '-': return true;
+        case '"': return true;
+        case '~': return true;
+        default: return false;
+    }
+}
+
+
+
 void 
-draw_text(r32 x, r32 y, r32 scale, FontId id, char* text)
+draw_text(r32 x, r32 y, r32 scale, f32 alpha, FontId id, ColorId color_id, char* text)
 {
     
     FontAsset* fnt = &font_assets[id];
@@ -623,6 +684,9 @@ draw_text(r32 x, r32 y, r32 scale, FontId id, char* text)
                 r32 descent = 0;
                 if(is_descender_glyph(text[i]))
                     descent =  fnt->descent * scale;
+                else if(is_acender_glyph(text[i]))
+                    descent =  fnt->ascent/2.0f * scale;
+                //TODO: I am probably handling the ascent wrong...
                 
                 
                 total_advance_x += fnt->kern_data[prev_char_index*TOTAL_GLYPHS+char_index]*scale;
@@ -631,7 +695,7 @@ draw_text(r32 x, r32 y, r32 scale, FontId id, char* text)
                 //printf("\n\nkern:%c %c %d",(char)(prev_char_index + START_GLYPH),text[i],(i32)kern);
                 
                 
-                draw_quad(total_advance_x, total_advance_y + descent, total_advance_x + width, total_advance_y + height + descent, 0.0, FONT_IMAGE, id, STANDARD_SHADER, (SpecialRenderInfo){.char_index = char_index});
+                draw_quad(total_advance_x, total_advance_y + descent, total_advance_x + width, total_advance_y + height + descent, alpha, FONT_IMAGE, id, COLOR_SHADER, (SpecialRenderInfo){.fnt_info.char_index = char_index, .fnt_info.color = color_id});
                 
                 total_advance_x += width;
                 prev_char_index = char_index;
@@ -642,36 +706,12 @@ draw_text(r32 x, r32 y, r32 scale, FontId id, char* text)
 }
 
 void
-draw_sprite(f32 x, f32 y, ZoomEffect z_effect, SpriteId id, u32 frame)
+draw_sprite(f32 x, f32 y, f32 scale, SpriteId id, f32 alpha, u32 frame, i32 shader_id, i32 color)
 {
     
+    const Sprite* spr = &sprites[id];
+    draw_quad(x - ((f32)spr->width/2 * scale) , y, x + ((f32)spr->width/2 * scale), y + spr->height*scale, alpha, SPRITE_IMAGE, spr->image_id, shader_id, (SpecialRenderInfo){.spr_info = {id, frame, color}});
     
-    f32 scale = 0;
-    f32 hscale = 0;
-    if(z_effect == DOWN_ZOOM)
-    {
-        scale = gs.scale;
-        hscale = gs.hscale;
-        
-        
-        const Sprite* spr = &sprites[id];
-        draw_quad(x - ((f32)spr->width/2) - hscale, y - hscale - scale, x + ((f32)spr->width/2) +hscale, y + spr->height  - scale, 0, SPRITE_IMAGE, spr->image_id, STANDARD_SHADER, (SpecialRenderInfo){.spr_info = {id, frame}});
-    }
-    else if(z_effect == NORMAL_ZOOM)
-    {
-        scale = gs.scale;
-        hscale = gs.hscale;
-        
-        
-        const Sprite* spr = &sprites[id];
-        draw_quad(x - ((f32)spr->width/2) - hscale, y -hscale, x + ((f32)spr->width/2) +hscale, y + spr->height + hscale, 0, SPRITE_IMAGE, spr->image_id, STANDARD_SHADER, (SpecialRenderInfo){.spr_info = {id, frame}});
-    }
-    else
-    {
-        
-        const Sprite* spr = &sprites[id];
-        draw_quad(x - ((f32)spr->width/2) - hscale, y - hscale - scale, x + ((f32)spr->width/2) +hscale, y + spr->height  - scale, 0, SPRITE_IMAGE, spr->image_id, STANDARD_SHADER, (SpecialRenderInfo){.spr_info = {id, frame}});
-    }
 }
 
 void
@@ -679,18 +719,39 @@ draw_entity(Entity *e)
 {
     if(e->invisible)
         return;
-    //draw_sprite(e->pos.x, e->pos.y, e->sprite_id, e->frame);
-    ZoomEffect z_effect = DOWN_ZOOM;
-    if(e->type == PLAYER_ENT)
-        z_effect= NO_ZOOM;
-    if(e->type == PARALAX_ENT && e->z_location > gs.z_location)
-        z_effect= NORMAL_ZOOM;
-    draw_sprite(e->aabb.pos.x, e->aabb.pos.y - e->aabb.half_size.y, z_effect,  e->sprite_id, e->frame);
+    
+    
+    
+    switch(e->type)
+    {
+        case TEXTY_ENT:
+        {
+            draw_text(e->aabb.pos.x -100, e->aabb.pos.y +50, 1.0f,e->alpha, TEST_FNT, dialouge_colors[e->info_id], dialouges[e->info_id]);
+        }break;
+        case BINK_BLAST_ENT:
+        {
+            draw_sprite(e->aabb.pos.x, e->aabb.pos.y - e->aabb.half_size.y*1.5, e->scale, e->sprite_id,0.0f, e->frame, e->shader_id, e->color);
+        }break;
+        default:
+        draw_sprite(e->aabb.pos.x, e->aabb.pos.y - e->aabb.half_size.y, e->scale, e->sprite_id, 0.0f, e->frame, e->shader_id, e->color);
+    }
 }
 
 void draw_entities()
 {
-    entities_apply(&draw_entity);
+    
+    for(i32 i = 0; i < gs.num_entities; i++)
+    {
+        gs.sort_buffer[i] = (SortPair){i, ((f32)(gs.entities[i].d_layer*1000) - ((gs.entities[i].aabb.pos.y + sprites[gs.entities[i].sprite_id].y_offset)/100)) };
+        
+    }
+    quick_sort(gs.sort_buffer, gs.num_entities);
+    
+    
+    for(i32 i = 0; i < gs.num_entities; i++)
+    {
+        draw_entity(&gs.entities[gs.sort_buffer[i].id]);
+    }
 }
 
 
@@ -771,9 +832,6 @@ void draw_bounding_boxs()
 
 void draw_tiles()
 {
-    f32 scale = gs.scale;
-    f32 hscale = gs.hscale;
-    
     for(i32 y = 0; y < gs.level_dim_y; y++)
     {
         for(i32 x = 0; x < gs.level_dim_x; x++)
@@ -784,7 +842,23 @@ void draw_tiles()
             else
                 id += -1;
             
-            draw_quad(x *TILE_SIZE  - hscale, (gs.level_dim_y - y -1 ) * TILE_SIZE  -scale - hscale, x *TILE_SIZE + TILE_SIZE +hscale, (gs.level_dim_y - y) * TILE_SIZE - scale , 0, TILE_IMAGE, TEST_IMG, STANDARD_SHADER, (SpecialRenderInfo){.spr_info = {id, 0}});
+            draw_quad(x *TILE_SIZE  , (gs.level_dim_y - y -1 ) * TILE_SIZE , x *TILE_SIZE + TILE_SIZE , (gs.level_dim_y - y) * TILE_SIZE  , 0, TILE_IMAGE, TEST_IMG, STANDARD_SHADER, (SpecialRenderInfo){.spr_info = {id, 0}});
+        }
+        
+    }
+    
+    
+    for(i32 y = 0; y < gs.level_dim_y; y++)
+    {
+        for(i32 x = 0; x < gs.level_dim_x; x++)
+        {
+            i32 id = gs.top_tiles[x + (y * gs.level_dim_x)];
+            if(id == 0)
+                continue;
+            else
+                id += -1;
+            
+            draw_quad(x *TILE_SIZE  , (gs.level_dim_y - y -1 ) * TILE_SIZE , x *TILE_SIZE + TILE_SIZE , (gs.level_dim_y - y) * TILE_SIZE  , 0, TILE_IMAGE, TEST_IMG, STANDARD_SHADER, (SpecialRenderInfo){.spr_info = {id, 0}});
         }
         
     }
@@ -792,4 +866,33 @@ void draw_tiles()
 }
 
 
+void draw_black_screen()
+{
+    draw_sprite(SCREEN_WIDTH/2, 0, 50, BLACK_SPR, gs.black_alpha, 0, STANDARD_SHADER, M_BLACK);
+    
+}
 
+
+void
+update_cam_location()
+{
+    if(gs.player == NULL)
+        return;
+    
+    f32 target_x = gs.player->aabb.pos.x;
+    f32 target_y = gs.player->aabb.pos.y;
+    
+    
+    target_x =max_r32(target_x, SCREEN_WIDTH / 2);
+    target_x =min_r32(target_x, gs.level_dim_x * TILE_SIZE - (SCREEN_WIDTH / 2));
+    
+    target_y =max_r32(target_y, SCREEN_HEIGHT / 2);
+    
+    target_y =min_r32(target_y, gs.level_dim_y * TILE_SIZE - (SCREEN_HEIGHT / 2));
+    
+    
+    
+    rd.cam.x = target_x;
+    rd.cam.y = target_y;
+    
+}

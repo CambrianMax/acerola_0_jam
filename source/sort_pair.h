@@ -13,7 +13,7 @@ typedef struct
 
 
 
-inline void
+extern inline void
 sort_pair_swap(SortPair *a, SortPair *b)
 {
     SortPair c = *b;

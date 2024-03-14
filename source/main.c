@@ -38,9 +38,10 @@ GameControllerInput* new_controller;
 GameControllerInput* old_controller;
 u32 loop_time = 0;
 
+#define SCREEN_MULTIPLY 6
 
-#define SCREEN_WIDTH 800
-#define SCREEN_HEIGHT 600
+#define SCREEN_WIDTH 4 * 32 * SCREEN_MULTIPLY
+#define SCREEN_HEIGHT 3 * 32 * SCREEN_MULTIPLY
 
 
 #include "sort_pair.h"
@@ -50,15 +51,20 @@ u32 loop_time = 0;
 #include "entity.h"
 #include "render.h"
 #include "level.h"
+#include "dialouge.h"
 #include "game.h"
 
 #include "render.c"
+#include "assets.c"
 #include "sprites.c"
 #include "collision.c"
 #include "entity.c"
 #include "entity_sim.c"
 #include "level.c"
+#include "dialouge.c"
 #include "game.c"
+
+
 
 void
 desktop_loop()
@@ -88,7 +94,8 @@ desktop_loop()
         process_key_press(&new_controller->move_up, &old_controller->move_up, currentKeyStates[SDL_SCANCODE_UP]);
         process_key_press(&new_controller->move_down, &old_controller->move_down, currentKeyStates[SDL_SCANCODE_DOWN]);
         process_key_press(&new_controller->action_right, &old_controller->action_right, currentKeyStates[SDL_SCANCODE_C]);
-        process_key_press(&new_controller->action_left, &old_controller->action_left, currentKeyStates[SDL_SCANCODE_Z]);
+        process_key_press(&new_controller->action_down, &old_controller->action_down, currentKeyStates[SDL_SCANCODE_X]);
+        process_key_press(&new_controller->start, &old_controller->start, currentKeyStates[SDL_SCANCODE_Z]);
         
         
         current_time = SDL_GetTicks();
@@ -136,6 +143,7 @@ emscripten_loop()
     process_key_press(&new_controller->move_up, &old_controller->move_up, currentKeyStates[SDL_SCANCODE_UP]);
     process_key_press(&new_controller->move_down, &old_controller->move_down, currentKeyStates[SDL_SCANCODE_DOWN]);
     process_key_press(&new_controller->action_right, &old_controller->action_right, currentKeyStates[SDL_SCANCODE_C]);
+    process_key_press(&new_controller->action_down, &old_controller->action_down, currentKeyStates[SDL_SCANCODE_X]);
     process_key_press(&new_controller->start, &old_controller->start, currentKeyStates[SDL_SCANCODE_Z]);
     
     
@@ -169,7 +177,6 @@ emscripten_loop()
 }
 
 
-
 int main() {
     //Initialize SDL
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) {
@@ -184,15 +191,16 @@ int main() {
         printf("Failed to initialize SDL_mixer: %s\n", Mix_GetError());
         return 1;
     }
-    
+    Mix_AllocateChannels(16);
     //Create SDL window
-    window = SDL_CreateWindow("Acerola_0", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_OPENGL);
+    window = SDL_CreateWindow("Bink's Quest", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_OPENGL );
     if (!window) {
         fprintf(stderr, "Window could not be created! SDL_Error: %s\n", SDL_GetError());
         return 1;
     }
-    SDL_Surface* icon = IMG_Load("assets/mini_hog.ico");
+    SDL_Surface* icon = IMG_Load("assets/bink.ico");
     SDL_SetWindowIcon(window, icon);
+    //SDL_SetWindowFullscreen(window,SDL_WINDOW_FULLSCREEN_DESKTOP);
     
 #ifdef __EMSCRIPTEN__
     // Create OpenGL ES context
@@ -253,6 +261,7 @@ int main() {
     
     game_cleanup();
     // Clean up
+    Mix_HaltChannel(-1);
     Mix_HaltChannel(-1);
     Mix_HaltMusic();
     
