@@ -178,6 +178,7 @@ emscripten_loop()
 
 
 int main() {
+    
     //Initialize SDL
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) {
         fprintf(stderr, "SDL could not initialize! SDL_Error: %s\n", SDL_GetError());

@@ -2,7 +2,8 @@
 void
 kill_bink()
 {
-    
+    if(gs.bink_dead)
+        return;
     gs.player->death_marked = true;
     
     gs.bink_dead = true;

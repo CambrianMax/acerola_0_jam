@@ -415,7 +415,6 @@ void render()
     
     Mat4 proj = mat4_ortho(0.0f, SCREEN_WIDTH, 0.0f , SCREEN_HEIGHT, -1.0f, 1.0f);
     
-    
     i32 tex_width = 0;
     i32 tex_height = 0;
     

@@ -302,7 +302,7 @@ DECOR_ENT_sim(Entity* e)
                 
                 V2 vel = {0,-speed};
                 
-                add_bad_bullet_entity(e->aabb.pos.x, e->aabb.pos.y +20, vel, 0, W_BULLET_SPR);
+                add_bad_bullet_entity(e->aabb.pos.x, e->aabb.pos.y+20, vel, 0, W_BULLET_SPR);
                 e->dec.emit_cooldown = 1.0f;
             }
         }break;
@@ -315,7 +315,7 @@ DECOR_ENT_sim(Entity* e)
                 
                 V2 vel = {-speed,0};
                 
-                add_bad_bullet_entity(e->aabb.pos.x, e->aabb.pos.y +20, vel, 0, W_BULLET_SPR);
+                add_bad_bullet_entity(e->aabb.pos.x, e->aabb.pos.y+10, vel, 0, W_BULLET_SPR);
                 e->dec.emit_cooldown = 1.0f;
             }
         }break;
@@ -328,7 +328,7 @@ DECOR_ENT_sim(Entity* e)
                 
                 V2 vel = {speed,0};
                 
-                add_bad_bullet_entity(e->aabb.pos.x, e->aabb.pos.y +20, vel, 0, W_BULLET_SPR);
+                add_bad_bullet_entity(e->aabb.pos.x, e->aabb.pos.y+10, vel, 0, W_BULLET_SPR);
                 e->dec.emit_cooldown = 1.0f;
             }
         }break;
@@ -342,7 +342,7 @@ DECOR_ENT_sim(Entity* e)
                 
                 V2 vel = {0,speed};
                 
-                add_bad_bullet_entity(e->aabb.pos.x, e->aabb.pos.y +20, vel, 0, W_BULLET_SPR);
+                add_bad_bullet_entity(e->aabb.pos.x, e->aabb.pos.y, vel, 0, W_BULLET_SPR);
                 e->dec.emit_cooldown = 1.0f;
             }
         }break;
@@ -409,9 +409,9 @@ MISC_ENT_sim(Entity* e)
                     gs.witch = w;
                     e->death_marked = true;
                     
-                    add_decor_entity(30,40, WITCH_BLOCK_SPR);
-                    add_decor_entity(30,60, WITCH_BLOCK_SPR);
-                    add_decor_entity(30,80, WITCH_BLOCK_SPR);
+                    add_decor_entity(15,30, WITCH_BLOCK_SPR);
+                    add_decor_entity(15,50, WITCH_BLOCK_SPR);
+                    add_decor_entity(15,70, WITCH_BLOCK_SPR);
                 }
             }
             else 

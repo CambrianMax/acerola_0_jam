@@ -3,27 +3,29 @@
 
 <head>
     <meta charset="utf-8">
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta http-equiv="Content-Type" content="width=device-width, initial-scale=1.0">
 </head>
 
 <style>
+
     canvas {
         border: none;
         cursor: pointer;
-        outline: none; 
-    }
-
+        outline: none;
+    	image-rendering: pixelated;
+   	transform: scale(1);  
     .focused {
         border: none; 
         outline: none;
     }
+    }
+
 </style>
 
 <body>
-	
+
     <!-- Create the canvas that the C++ code will draw into -->
-    <canvas id="canvas" oncontextmenu="event.preventDefault()"  tabindex=0 onclick='refocus_myself()'
-}</canvas>
+    <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex=0 onclick="refocus_myself()" </canvas>
 	
 
     <!-- Allow the C++ to access the canvas element --> 
